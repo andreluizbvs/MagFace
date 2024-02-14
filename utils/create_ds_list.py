@@ -27,8 +27,8 @@ def write_directory_info_opt(path, output_file):
                 unique_id += 1
             
 # Example usage:
-input_path = "/home/ray/biometrics-storage/data/caf/raw/"
-output_file = "/home/ray/biometrics-storage/data/caf/caf_magface-style.list"
+input_path = "/home/..."
+output_file = "/home/..."
 
 write_directory_info_opt(input_path, output_file)
 print(f"Directory information written to {output_file}")
