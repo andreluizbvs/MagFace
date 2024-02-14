@@ -16,7 +16,7 @@ mkdir -p ${OUTPUT}/vis/
 
 python -u trainer.py \
     --arch ${MODEL_ARC} \
-    --train_list /home/ray/biometrics-storage/data/caf/caf_magface-style.list \
+    --train_list \
     --workers 8 \
     --epochs 50 \
     --start-epoch 0 \
