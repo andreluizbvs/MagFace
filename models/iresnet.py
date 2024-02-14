@@ -162,7 +162,7 @@ def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained:
         # state_dict = load_state_dict_from_url(model_urls[arch],
         #                                     progress=progress)
-        state_dict_path = '/home/ray/biometrics-storage/workspaces/a-silva/MagFace/magface_iresnet50_MS1MV2_ddp_fp32.pth'
+        state_dict_path = './magface_iresnet50_MS1MV2_ddp_fp32.pth'
         state_dict = torch.load(state_dict_path)['state_dict']
 
         pattern_to_remove = '^features.module.'
