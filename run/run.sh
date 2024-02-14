@@ -16,15 +16,15 @@ mkdir -p ${OUTPUT}/vis/
 
 python -u trainer.py \
     --arch ${MODEL_ARC} \
-    --train_list /training/face-group/opensource/ms1m-112/ms1m_train.list \
+    --train_list /home/ray/biometrics-storage/data/caf/caf_magface-style.list \
     --workers 8 \
-    --epochs 25 \
+    --epochs 50 \
     --start-epoch 0 \
-    --batch-size 512 \
+    --batch-size 64 \
     --embedding-size 512 \
     --last-fc-size 85742 \
     --arc-scale 64 \
-    --learning-rate 0.1 \
+    --learning-rate 0.0001 \
     --momentum 0.9 \
     --weight-decay 5e-4 \
     --lr-drop-epoch 10 18 22 \

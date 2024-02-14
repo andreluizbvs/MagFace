@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
-import os
-import cv2
 import math
+
 import numpy as np
-from tqdm import tqdm
 from sklearn.model_selection import KFold
-from sklearn import metrics
-from scipy.optimize import brentq
-from scipy import interpolate
+from sklearn.metrics import auc
+
+from facematch.utils.euclidean_dist import euclidean_dist
+
 
 # basic args
 parser = argparse.ArgumentParser(description='Evaluation')
@@ -53,7 +52,7 @@ def perform_1v1_eval(args):
     targets = []
     
 
-    for k, v in feat_pairs.items():
+    for _, v in feat_pairs.items():
         feat_a = v[0]
         feat_b = v[1]
         ab_is_same = int(v[2])
@@ -74,8 +73,9 @@ def perform_1v1_eval(args):
 
     thresholds = np.arange(0, 4, 0.01)
     tpr, fpr, accuracy = calculate_roc(
-            thresholds, embeddings0, embeddings1,targets,
+            thresholds, embeddings0, embeddings1, targets,
             nrof_folds=args.test_folds, subtract_mean=True)
+    print('    Area Under Curve (AUC): {:.4f}'.format(auc(fpr, tpr)))
     print('    Accuracy: %2.5f+-%2.5f' % (np.mean(accuracy), np.std(accuracy)))
 
 def distance_(embeddings0, embeddings1):
@@ -107,7 +107,8 @@ def calculate_roc(thresholds, embeddings0, embeddings1,
         else:
             mean = 0.
 
-        dist = distance_(embeddings0-mean, embeddings1-mean)
+        # dist = distance_(embeddings0-mean, embeddings1-mean)
+        dist = euclidean_dist(embeddings0-mean, embeddings1-mean, sum_axis=1)
 
         # Find the best threshold for the fold
         acc_train = np.zeros((nrof_thresholds))

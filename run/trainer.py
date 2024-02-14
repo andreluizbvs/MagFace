@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 import sys
 sys.path.append("..")
+
+import argparse
+import os
+import pdb
+import pprint
+import time
+import traceback
+import warnings
+
+import cv2
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+
 from dataloader import dataloader
 from models import magface
-from utils import utils
-import numpy as np
-from collections import OrderedDict
 from termcolor import cprint
-from torchvision import datasets
-from torchvision import transforms
-import torch.backends.cudnn as cudnn
-import torch.multiprocessing as mp
-import torch.nn.functional as F
-import torch.nn as nn
-import torchvision
-import torch
-import argparse
-import random
-import warnings
-import time
-import pprint
-import os
+from utils import utils
 
 
 warnings.filterwarnings("ignore")
@@ -109,18 +109,24 @@ def main(args):
 def main_worker(ngpus_per_node, args):
     global best_acc1
 
+    wp = '/home/ray/biometrics-storage/workspaces/a-silva/'
+    state_dict_path = wp + 'MagFace/magface_iresnet50_MS1MV2_ddp_fp32.pth'
+    total_state_dict = torch.load(state_dict_path)
+    args.start_epoch = total_state_dict['epoch']
+
     cprint('=> modeling the network ...', 'green')
     model = magface.builder(args)
     model = torch.nn.DataParallel(model).cuda()
     # for name, param in model.named_parameters():
     #     cprint(' : layer name and parameter size - {} - {}'.format(name, param.size()), 'green')
 
-    cprint('=> building the oprimizer ...', 'green')
+    cprint('=> building the optimizer ...', 'green')
     optimizer = torch.optim.SGD(
         filter(lambda p: p.requires_grad, model.parameters()),
         args.lr,
         momentum=args.momentum,
         weight_decay=args.weight_decay)
+    optimizer.load_state_dict(total_state_dict['optimizer'])
     pprint.pprint(optimizer)
 
     cprint('=> building the dataloader ...', 'green')
@@ -183,17 +189,22 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
     # update lr
     learning_rate.update(current_lr)
 
-    for i, (input, target) in enumerate(train_loader):
+    for i, (input_img, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
         global iters
         iters += 1
 
-        input = input.cuda(non_blocking=True)
+        # # Saving preprocessed images for debugging purposes
+        # for i, img_tensor in enumerate(input_img):
+        #     img = (img_tensor.permute(1,2,0).numpy() * 255).astype(np.uint8)
+        #     cv2.imwrite('./' + str(i) + '.jpg', img)
+
+        input_img = input_img.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)
 
         # compute output
-        output, x_norm = model(input, target)
+        output, x_norm = model(input_img, target)
 
         loss_id, loss_g, one_hot = criterion(output, target, x_norm)
         loss = loss_id + args.lambda_g * loss_g
@@ -201,12 +212,12 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         # measure accuracy and record loss
         acc1, acc5 = utils.accuracy(args, output[0], target, topk=(1, 5))
 
-        losses.update(loss.item(), input.size(0))
-        top1.update(acc1[0], input.size(0))
-        top5.update(acc5[0], input.size(0))
+        losses.update(loss.item(), input_img.size(0))
+        top1.update(acc1[0], input_img.size(0))
+        top5.update(acc5[0], input_img.size(0))
 
-        losses_id.update(loss_id.item(), input.size(0))
-        losses_mag.update(args.lambda_g*loss_g.item(), input.size(0))
+        losses_id.update(loss_id.item(), input_img.size(0))
+        losses_mag.update(args.lambda_g*loss_g.item(), input_img.size(0))
 
         # compute gradient and do solver step
         optimizer.zero_grad()
@@ -255,4 +266,9 @@ def debug_info(x_norm, l_a, u_a, l_margin, u_margin):
 if __name__ == '__main__':
 
     pprint.pprint(vars(args))
-    main(args)
+    try:
+        main(args)
+    except:
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)

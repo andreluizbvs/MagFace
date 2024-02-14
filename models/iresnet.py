@@ -1,8 +1,17 @@
+import re
 import torch
 from torch import nn
 # from torchvision.models.utils import load_state_dict_from_url
 
 __all__ = ['iresnet18', 'iresnet34', 'iresnet50', 'iresnet100']
+
+
+def rename_keys(original_dict, pattern):
+    updated_dict = {}
+    for old_key, value in original_dict.items():
+        new_key = re.sub(pattern, '', old_key, count=1)
+        updated_dict[new_key] = value
+    return updated_dict
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -150,10 +159,18 @@ class IResNet(nn.Module):
 
 def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
     model = IResNet(block, layers, **kwargs)
-    # if pretrained:
-    # state_dict = load_state_dict_from_url(model_urls[arch],
-    #                                        progress=progress)
-    # model.load_state_dict(state_dict)
+    if pretrained:
+        # state_dict = load_state_dict_from_url(model_urls[arch],
+        #                                     progress=progress)
+        state_dict_path = '/home/ray/biometrics-storage/workspaces/a-silva/MagFace/magface_iresnet50_MS1MV2_ddp_fp32.pth'
+        state_dict = torch.load(state_dict_path)['state_dict']
+
+        pattern_to_remove = '^features.module.'
+        state_dict = rename_keys(state_dict, pattern_to_remove)
+
+        state_dict.pop("parallel_fc.weight")
+        model.load_state_dict(state_dict)
+        print("CHECKPOINT LOADED")
     return model
 
 
