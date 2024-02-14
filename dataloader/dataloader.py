@@ -14,7 +14,7 @@ from skimage import transform as trans
 from utils import cv2_trans as transforms
 
 side_size = 112
-op_path = '/home/ray/biometrics-storage/inputs/train/labels/op_data_total.csv'
+op_path = './op_data_total.csv'
 arcface_src = np.array(
     [[38.2946, 51.6963], [73.5318, 51.5014],  # eyes
      [56.0252, 71.7366],                      # nose
