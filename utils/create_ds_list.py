@@ -4,7 +4,7 @@ from tqdm import tqdm
 def write_directory_info(path, output_file):
     with open(output_file, 'w') as file:
         unique_id = 0
-        num_subs = 6968123 # caf ds
+        num_subs = 6968123 # ds size
         for root, dirs, files in tqdm(os.walk(path), total=num_subs, desc="Processing"):
             if root != path:  # Skip the root directory itself
                 for f in files: 
@@ -16,7 +16,7 @@ def write_directory_info(path, output_file):
 def write_directory_info_opt(path, output_file):
     with open(output_file, 'w') as file:
         unique_id = 0
-        num_subs = 6968123 #caf ds
+        num_subs = 6968123 # ds size
         
         for entry in tqdm(os.scandir(path), total=num_subs, desc="Processing"):
             if entry.is_dir():
