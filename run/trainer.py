@@ -109,7 +109,7 @@ def main(args):
 def main_worker(ngpus_per_node, args):
     global best_acc1
 
-    wp = '/home/ray/biometrics-storage/workspaces/a-silva/'
+    wp = './'
     state_dict_path = wp + 'MagFace/magface_iresnet50_MS1MV2_ddp_fp32.pth'
     total_state_dict = torch.load(state_dict_path)
     args.start_epoch = total_state_dict['epoch']
