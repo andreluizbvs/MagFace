@@ -1,7 +1,6 @@
 import re
 import torch
 from torch import nn
-# from torchvision.models.utils import load_state_dict_from_url
 
 __all__ = ['iresnet18', 'iresnet34', 'iresnet50', 'iresnet100']
 
@@ -160,8 +159,6 @@ class IResNet(nn.Module):
 def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
     model = IResNet(block, layers, **kwargs)
     if pretrained:
-        # state_dict = load_state_dict_from_url(model_urls[arch],
-        #                                     progress=progress)
         state_dict_path = './magface_iresnet50_MS1MV2_ddp_fp32.pth'
         state_dict = torch.load(state_dict_path)['state_dict']
 
@@ -170,7 +167,7 @@ def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
 
         state_dict.pop("parallel_fc.weight")
         model.load_state_dict(state_dict)
-        print("CHECKPOINT LOADED")
+        print("CHECKPOINT LOADED (inside models)")
     return model
 
 

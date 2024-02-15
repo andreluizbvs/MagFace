@@ -86,6 +86,7 @@ parser.add_argument('--arc-scale', default=64, type=int,
                     help='scale for arcmargin loss')
 parser.add_argument('--vis_mag', default=1, type=int,
                     help='visualize the magnitude against cos')
+parser.add_argument('--pretrained', action=argparse.BooleanOptionalAction)
 
 args = parser.parse_args()
 
@@ -109,14 +110,29 @@ def main(args):
 def main_worker(ngpus_per_node, args):
     global best_acc1
 
-    wp = './'
-    state_dict_path = wp + 'MagFace/magface_iresnet50_MS1MV2_ddp_fp32.pth'
-    total_state_dict = torch.load(state_dict_path)
-    args.start_epoch = total_state_dict['epoch']
-
     cprint('=> modeling the network ...', 'green')
     model = magface.builder(args)
-    model = torch.nn.DataParallel(model).cuda()
+
+    state_dict_path = '../magface_iresnet50_MS1MV2_ddp_fp32.pth'
+    total_state_dict = torch.load(state_dict_path)
+    state_dict = total_state_dict['state_dict']
+    args.start_epoch = total_state_dict['epoch']
+
+    rm_pat = 'module.'
+    new_pat = ''
+    state_dict = utils.rename_keys(state_dict, rm_pat, new_pat)
+    state_dict.pop("parallel_fc.weight")
+
+    model.load_state_dict(state_dict, strict=False)
+    print("CHECKPOINT LOADED (IN TRAINER)")
+
+    for name, param in model.named_parameters():
+        if name != "fc.weight":
+            param.requires_grad = False
+
+
+    model = model.cuda()
+    # model = torch.nn.DataParallel(model).cuda()
     # for name, param in model.named_parameters():
     #     cprint(' : layer name and parameter size - {} - {}'.format(name, param.size()), 'green')
 
@@ -126,11 +142,13 @@ def main_worker(ngpus_per_node, args):
         args.lr,
         momentum=args.momentum,
         weight_decay=args.weight_decay)
-    optimizer.load_state_dict(total_state_dict['optimizer'])
+    
+    # optimizer.load_state_dict(total_state_dict['optimizer'])
     pprint.pprint(optimizer)
 
     cprint('=> building the dataloader ...', 'green')
-    train_loader = dataloader.train_loader(args)
+    # train_loader = dataloader.train_loader(args)
+    train_loader = dataloader.train_loader_custom(args)
 
     cprint('=> building the criterion ...', 'green')
     criterion = magface.MagLoss(
@@ -195,10 +213,12 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         global iters
         iters += 1
 
-        # # Saving preprocessed images for debugging purposes
-        # for i, img_tensor in enumerate(input_img):
-        #     img = (img_tensor.permute(1,2,0).numpy() * 255).astype(np.uint8)
-        #     cv2.imwrite('./' + str(i) + '.jpg', img)
+        # Saving preprocessed images for debugging purposes
+        for i, img_tensor in enumerate(input_img):
+            img = (img_tensor.permute(1,2,0).numpy() * 255).astype(np.uint8)
+            cv2.imwrite('./' + str(i) + '.jpg', img)
+
+        input()
 
         input_img = input_img.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)

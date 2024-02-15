@@ -16,7 +16,7 @@ mkdir -p ${OUTPUT}/vis/
 
 python -u trainer.py \
     --arch ${MODEL_ARC} \
-    --train_list \
+    --train_list ./faces_emore/ms1mv2.list \
     --workers 8 \
     --epochs 50 \
     --start-epoch 0 \
@@ -24,7 +24,7 @@ python -u trainer.py \
     --embedding-size 512 \
     --last-fc-size 85742 \
     --arc-scale 64 \
-    --learning-rate 0.0001 \
+    --learning-rate 0.1 \
     --momentum 0.9 \
     --weight-decay 5e-4 \
     --lr-drop-epoch 10 18 22 \
@@ -37,4 +37,4 @@ python -u trainer.py \
     --l_margin ${lm} \
     --u_margin ${um} \
     --lambda_g ${lg} \
-    --vis_mag 1    2>&1 | tee ${OUTPUT}/output.log   
+    --vis_mag 1    2>&1 | tee ${OUTPUT}/output.log

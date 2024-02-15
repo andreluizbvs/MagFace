@@ -14,7 +14,7 @@ from skimage import transform as trans
 from utils import cv2_trans as transforms
 
 side_size = 112
-op_path = './op_data_total.csv'
+op_path = 'preprocess-yolo.csv'
 arcface_src = np.array(
     [[38.2946, 51.6963], [73.5318, 51.5014],  # eyes
      [56.0252, 71.7366],                      # nose
@@ -77,7 +77,7 @@ def norm_crop(img, landmark, image_size=side_size, mode='arcface'):
     return warped
     
 
-class MagTrainDataset(data.Dataset):
+class MagTrainDatasetCustom(data.Dataset):
     def __init__(self, ann_file, transform=None):
         self.ann_file = ann_file
         self.transform = transform
@@ -88,51 +88,45 @@ class MagTrainDataset(data.Dataset):
         self.im_names = []
         self.targets = []
         self.coordinates = []
+        ids = {}
 
         csv_data = pd.read_csv(op_path)
         csv_data.dropna(subset=['face_bbox', 'eyes', 'nose', 'mouth'], inplace=True)
         
+        prefix = ""
         count = 0
-        num_lines = 19909712
-        with open(self.ann_file) as f:
-            for line in tqdm(f.readlines(), total=num_lines):
-                count += 1
-                if count > 1000:
-                    break
-                try:
-                    data = line.strip().split(' ')
-                    if len(data) > 2:
-                        continue
-                    im_name = data[0].split('/')[-1]
-                    filter_mask = np.in1d(csv_data['image_name'], im_name)
-                    row = csv_data.loc[filter_mask]
-                    if len(row) == 0:
-                        continue
-                    row = row.iloc[0] # Get first row (ideally only has one)
-                    self.im_names.append(data[0])
-                    self.targets.append(int(data[1]))
-                    bbox = ast.literal_eval(row['face_bbox'])
-                    eye_left = ast.literal_eval(row['eyes'])[0]
-                    eye_right = ast.literal_eval(row['eyes'])[1]
-                    nose = ast.literal_eval(row['nose'])
-                    mouth_left = ast.literal_eval(row['mouth'])[0]
-                    mouth_right = ast.literal_eval(row['mouth'])[1]
-                    self.coordinates.append(
-                        (bbox,
-                        convert_coordinates(
-                            bbox, 
-                            [eye_left, 
-                             eye_right, 
-                             nose, 
-                             mouth_left, 
-                             mouth_right]
-                        ))
-                    )
-                except Exception as e:
-                    print(e)
-                    print(data)
         
-        del csv_data
+        for _, row in tqdm(csv_data.iterrows(), total=csv_data.shape[0]):
+            try:
+                full_name = os.path.join(prefix, row['subject_id'], row['image_name'])
+                self.im_names.append(full_name)
+                if row['subject_id'] not in ids:
+                    ids[row['subject_id']] = count
+                    count += 1
+
+                self.targets.append(ids[row['subject_id']])
+                bbox = ast.literal_eval(row['face_bbox'])
+                eye_left = ast.literal_eval(row['eyes'])[0]
+                eye_right = ast.literal_eval(row['eyes'])[1]
+                nose = ast.literal_eval(row['nose'])
+                mouth_left = ast.literal_eval(row['mouth'])[0]
+                mouth_right = ast.literal_eval(row['mouth'])[1]
+                self.coordinates.append(
+                    (bbox,
+                    convert_coordinates(
+                        bbox, 
+                        [eye_left, 
+                            eye_right, 
+                            nose, 
+                            mouth_left, 
+                            mouth_right]
+                    ))
+                )
+            except Exception as e:
+                print(e)
+                print(data)
+        
+        del csv_data, ids
 
     def __getitem__(self, index):          
         im_name = self.im_names[index]
@@ -153,6 +147,36 @@ class MagTrainDataset(data.Dataset):
     def __len__(self):
         return len(self.im_names)
 
+class MagTrainDataset(data.Dataset):
+    def __init__(self, ann_file, transform=None):
+        self.ann_file = ann_file
+        self.transform = transform
+        self.init()
+
+    def init(self):
+        self.weight = {}
+        self.im_names = []
+        self.targets = []
+        self.pre_types = []
+        with open(self.ann_file) as f:
+            for line in f.readlines():
+                data = line.strip().split(' ')
+                self.im_names.append(data[0])
+                self.targets.append(int(data[1]))
+
+    def __getitem__(self, index):
+        im_name = self.im_names[index]
+        target = self.targets[index]
+
+        prefix = "./faces_emore"
+        full_path = os.path.join(prefix, im_name)
+        img = cv2.imread(full_path)
+
+        img = self.transform(img)
+        return img, target
+
+    def __len__(self):
+        return len(self.im_names)
 
 def train_loader(args):
     train_trans = transforms.Compose([
@@ -160,6 +184,28 @@ def train_loader(args):
         transforms.ToTensor(),
     ])
     train_dataset = MagTrainDataset(
+        args.train_list,
+        transform=train_trans
+    )
+    train_sampler = None
+    train_loader = data.DataLoader(
+        train_dataset,
+        shuffle=(train_sampler is None),
+        batch_size=args.batch_size,
+        num_workers=args.workers,
+        pin_memory=True,
+        sampler=train_sampler,
+        drop_last=False)
+    
+
+    return train_loader
+
+def train_loader_custom(args):
+    train_trans = transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+    ])
+    train_dataset = MagTrainDatasetCustom(
         args.train_list,
         transform=train_trans
     )
