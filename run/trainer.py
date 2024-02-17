@@ -110,6 +110,12 @@ def main(args):
 def main_worker(ngpus_per_node, args):
     global best_acc1
 
+    cprint('=> building the dataloader ...', 'green')
+    # train_loader = dataloader.train_loader(args)
+    train_loader, classes = dataloader.train_loader_custom(args)
+    args.last_fc_size = classes
+    print(f"Classes (unique subjects): {args.last_fc_size}")
+
     cprint('=> modeling the network ...', 'green')
     model = magface.builder(args)
 
@@ -124,7 +130,7 @@ def main_worker(ngpus_per_node, args):
     state_dict.pop("parallel_fc.weight")
 
     model.load_state_dict(state_dict, strict=False)
-    print("CHECKPOINT LOADED (IN TRAINER)")
+    print("Checkpoint loaded (in main)")
 
     for name, param in model.named_parameters():
         if name != "fc.weight":
@@ -145,10 +151,6 @@ def main_worker(ngpus_per_node, args):
     
     # optimizer.load_state_dict(total_state_dict['optimizer'])
     pprint.pprint(optimizer)
-
-    cprint('=> building the dataloader ...', 'green')
-    # train_loader = dataloader.train_loader(args)
-    train_loader = dataloader.train_loader_custom(args)
 
     cprint('=> building the criterion ...', 'green')
     criterion = magface.MagLoss(
@@ -212,13 +214,6 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         data_time.update(time.time() - end)
         global iters
         iters += 1
-
-        # Saving preprocessed images for debugging purposes
-        for i, img_tensor in enumerate(input_img):
-            img = (img_tensor.permute(1,2,0).numpy() * 255).astype(np.uint8)
-            cv2.imwrite('./' + str(i) + '.jpg', img)
-
-        input()
 
         input_img = input_img.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)

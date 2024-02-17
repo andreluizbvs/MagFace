@@ -14,7 +14,7 @@ from skimage import transform as trans
 from utils import cv2_trans as transforms
 
 side_size = 112
-op_path = 'preprocess-yolo.csv'
+op_path = './interim_prod_processed.csv'
 arcface_src = np.array(
     [[38.2946, 51.6963], [73.5318, 51.5014],  # eyes
      [56.0252, 71.7366],                      # nose
@@ -33,16 +33,6 @@ def convert_coordinates(bbox, coordinates):
     return [coord - np.array([x, y]) for coord in coordinates]
 
 
-def trans_img_and_coords(img, coords):
-    x = img.shape[0]
-    y = img.shape[1]
-    x_scale = side_size/x
-    y_scale = side_size/y
-
-    coords = [[coord[0] * x_scale, coord[1] * y_scale] for coord in coords]
-    img = cv2.resize(img, (side_size, side_size))
-
-    return img, coords
 
 def estimate_norm(lmk, image_size=side_size, mode='arcface'):
     assert lmk.shape == (5, 2)
@@ -116,16 +106,17 @@ class MagTrainDatasetCustom(data.Dataset):
                     convert_coordinates(
                         bbox, 
                         [eye_left, 
-                            eye_right, 
-                            nose, 
-                            mouth_left, 
-                            mouth_right]
+                         eye_right, 
+                         nose, 
+                         mouth_left, 
+                         mouth_right]
                     ))
                 )
             except Exception as e:
                 print(e)
                 print(data)
         
+        self.classes = len(ids)
         del csv_data, ids
 
     def __getitem__(self, index):          
@@ -138,8 +129,7 @@ class MagTrainDatasetCustom(data.Dataset):
         img = apply_bbox(img, bbox)
 
         coords = self.coordinates[index][1]
-        img, coords = trans_img_and_coords(img, coords)
-        img = norm_crop(img, np.array(self.coordinates[index][1]))
+        img = norm_crop(img, np.array(coords))
 
         img = self.transform(img)
         return img, target
@@ -220,4 +210,4 @@ def train_loader_custom(args):
         drop_last=False)
     
 
-    return train_loader
+    return train_loader, train_dataset.classes
