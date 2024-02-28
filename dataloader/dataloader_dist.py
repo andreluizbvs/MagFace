@@ -42,7 +42,7 @@ class MagTrainDataset(data.Dataset):
                     continue
                 data = line.strip().split(' ')
                 self.im_names.append(data[0])
-                target = int(data[2])
+                target = int(data[1])
                 self.targets.append(target)
 
     def __getitem__(self, index):

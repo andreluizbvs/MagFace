@@ -1,6 +1,7 @@
-torchvision
+--extra-index-url https://download.pytorch.org/whl/cu113
+torchvision==0.13.1+cu113
+torch==1.12.1+cu113
 torchshard
-torch
 numpy
 scipy
 termcolor
@@ -12,7 +13,7 @@ Pillow==6.2.2
 matplotlib 
 loguru
 six
-imageio
+imageio==2.9.0
 scikit-image
 tqdm
-sklearn
+scikit-learn

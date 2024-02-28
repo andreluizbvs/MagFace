@@ -22,19 +22,19 @@ def builder(args):
 def load_features(args):
     if args.arch == 'iresnet18':
         features = iresnet.iresnet18(
-            pretrained=True,
+            pretrained=args.pretrained,
             num_classes=args.embedding_size)
     elif args.arch == 'iresnet34':
         features = iresnet.iresnet34(
-            pretrained=True,
+            pretrained=args.pretrained,
             num_classes=args.embedding_size)
     elif args.arch == 'iresnet50':
         features = iresnet.iresnet50(
-            pretrained=True,
+            pretrained=args.pretrained,
             num_classes=args.embedding_size)
     elif args.arch == 'iresnet100':
         features = iresnet.iresnet100(
-            pretrained=True,
+            pretrained=args.pretrained,
             num_classes=args.embedding_size)
     else:
         raise ValueError()

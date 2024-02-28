@@ -3,12 +3,13 @@
     but are useful for building models or training code using the config system.
 """
 import logging
-import os
-import sys
 import math
-import shutil
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import os
+import re
+import sys
+import shutil
 
 
 import torch
@@ -160,3 +161,10 @@ def setup_logger(name, save_dir, distributed_rank, filename="log.txt"):
         logger.addHandler(fh)
 
     return logger
+
+def rename_keys(original_dict, pattern, new_pat):
+    updated_dict = {}
+    for old_key, value in original_dict.items():
+        new_key = re.sub(pattern, new_pat, old_key, count=1)
+        updated_dict[new_key] = value
+    return updated_dict
